@@ -1,11 +1,11 @@
-# Tree
+# tree
 
-Prints directory and file (if `-f` option is specified) tree at a given path.
+Print directory and file (if `-f` option is specified) tree at a given path.
 
 ## Usage
 
 ```bash
-go run main.go <path string> [-f]
+go run tree.go <path string> [-f]
 ```
 
 >[!IMPORTANT]

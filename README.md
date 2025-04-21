@@ -6,7 +6,7 @@ Collection of small utilities written in Go.
 
 ## Contents
 
-- [Tree](/tree/) &mdash; prints directory tree at a given path.
+- [tree](/tree/) &mdash; print directory tree at a given path.
 
 <!---->
 
