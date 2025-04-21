@@ -1,3 +1,4 @@
+// See https://stepik.org/course/187490
 package main
 
 import (
