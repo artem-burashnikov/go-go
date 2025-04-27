@@ -1,3 +1,4 @@
+// See https://stepik.org/course/187490
 package main
 
 import (
@@ -59,7 +60,7 @@ func TestSigner(t *testing.T) {
 	// variables.
 
 	var (
-		DataSignerSalt         string = "" // на сервере будет другое значение
+		DataSignerSalt         string = ""
 		OverheatLockCounter    uint32
 		OverheatUnlockCounter  uint32
 		DataSignerMd5Counter   uint32
