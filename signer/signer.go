@@ -7,76 +7,97 @@ import (
 	"sync"
 )
 
-func ExecutePipeline(jobs ...job) {
-	var wg sync.WaitGroup
+func makeJob(j job, in chan any) chan any {
+	out := make(chan any)
+	go func() {
+		defer close(out)
+		j(in, out)
+	}()
+	return out
+}
 
-	in := make(chan any)
-	for i := range jobs {
-		out := make(chan any)
+func ExecutePipeline(jobs ...job) {
+	var in chan any
+	for _, j := range jobs {
+		in = makeJob(j, in)
+	}
+
+	// This spins while the last out channel of the last job is open.
+	for range in {
+	}
+}
+
+func SingleHash(in, out chan any) {
+	var (
+		wg sync.WaitGroup
+		mu sync.Mutex
+	)
+
+	for rawData := range in {
+		stringData := strconv.Itoa(rawData.(int))
 
 		wg.Add(1)
-		go func(j job, in, out chan any) {
+		go func(stringData string) {
 			defer wg.Done()
-			defer close(out)
-			jobs[i](in, out)
-		}(jobs[i], in, out)
-		in = out
+			parts := make([]string, 2)
+
+			var inner sync.WaitGroup
+
+			inner.Add(1)
+			go func() {
+				defer inner.Done()
+				parts[0] = DataSignerCrc32(stringData)
+			}()
+
+			inner.Add(1)
+			go func() {
+				defer inner.Done()
+				mu.Lock()
+				md5Digest := DataSignerMd5(stringData)
+				mu.Unlock()
+				parts[1] = DataSignerCrc32(md5Digest)
+			}()
+
+			inner.Wait()
+			out <- strings.Join(parts, "~")
+		}(stringData)
 	}
 
 	wg.Wait()
 }
 
-func SingleHash(in, out chan any) {
-	for data := range in {
-		dataString := strconv.Itoa(data.(int))
-
-		parts := make([]string, 2)
-
-		var wg sync.WaitGroup
-
-		wg.Add(2)
-		go func() {
-			parts[0] = DataSignerCrc32(dataString) // 1s
-			wg.Done()
-		}()
-
-		md5Digest := DataSignerMd5(dataString) // 10ms
-
-		go func() {
-			parts[1] = DataSignerCrc32(md5Digest) // 1s
-			wg.Done()
-		}()
-
-		wg.Wait()
-
-		out <- strings.Join(parts, "~")
-	}
-}
-
 func MultiHash(in, out chan any) {
+	var wg sync.WaitGroup
+
 	for data := range in {
 		dataString := data.(string)
 
-		parts := make([]string, 6)
+		wg.Add(1)
+		go func(dataString string) {
+			defer wg.Done()
+			parts := make([]string, 6)
 
-		var wg sync.WaitGroup
+			var inner sync.WaitGroup
 
-		wg.Add(6)
-		for i := range 6 {
-			go func(i int) {
-				defer wg.Done()
-				parts[i] = DataSignerCrc32(strconv.Itoa(i) + dataString)
-			}(i)
-		}
+			for i := range 6 {
+				inner.Add(1)
+				go func(i int) {
+					defer inner.Done()
+					parts[i] = DataSignerCrc32(strconv.Itoa(i) + dataString)
+				}(i)
+			}
 
-		wg.Wait()
+			inner.Wait()
 
-		out <- strings.Join(parts, "")
+			out <- strings.Join(parts, "")
+		}(dataString)
 	}
+
+	wg.Wait()
 }
 
 func CombineResults(in, out chan any) {
-	result := make([]string, 0)
+	result := make([]string, 0, MaxInputDataLen)
 
 	for data := range in {
 		result = append(result, data.(string))
