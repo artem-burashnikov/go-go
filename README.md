@@ -7,7 +7,7 @@ Collection of small utilities written in Go.
 ## Contents
 
 - [tree](/tree/) &mdash; print directory tree at a given path.
-- [signer](/signer/) &mdash; calculate signing hash.
+- [signer](/signer/) &mdash; execute asynchronous pipeline of hash functions.
 
 <!---->
 
